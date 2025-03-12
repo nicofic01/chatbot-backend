@@ -20,14 +20,16 @@ async function initDB() {
         driver: sqlite3.Database
     });
 
-    await db.exec(`
-        CREATE TABLE IF NOT EXISTS conversations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_message TEXT,
-            ai_response TEXT,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
+await db.exec(`
+    CREATE TABLE IF NOT EXISTS conversations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_message TEXT,
+        ai_response TEXT,
+        user_email TEXT,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+`);
+
 
     return db;
 }
@@ -41,9 +43,9 @@ initDB().then(database => {
 
 // 📌 Endpoint per gestire le chat
 app.post("/chat", async (req, res) => {
-    const userMessage = req.body.message;
-    if (!userMessage) {
-        return res.status(400).json({ error: "Messaggio non valido" });
+    const { message, email } = req.body;  // Aggiungiamo 'email' nel corpo della richiesta
+    if (!message || !email) {
+        return res.status(400).json({ error: "Messaggio e email sono obbligatori" });
     }
 
     try {
@@ -58,7 +60,7 @@ app.post("/chat", async (req, res) => {
                 model: "gpt-3.5-turbo",
                 messages: [
                     { role: "system", content: "Sei un assistente esperto nel creare purpose aziendali." },
-                    { role: "user", content: userMessage }
+                    { role: "user", content: message }
                 ],
                 max_tokens: 300
             })
@@ -67,8 +69,8 @@ app.post("/chat", async (req, res) => {
         const data = await response.json();
         const aiResponse = data.choices[0].message.content;
 
-        // 📌 Salviamo la conversazione nel database
-        await db.run(`INSERT INTO conversations (user_message, ai_response) VALUES (?, ?)`, [userMessage, aiResponse]);
+        // 📌 Salviamo la conversazione nel database includendo l'email
+        await db.run(`INSERT INTO conversations (user_message, ai_response, user_email) VALUES (?, ?, ?)`, [message, aiResponse, email]);
 
         res.json({ reply: aiResponse });
     } catch (error) {
