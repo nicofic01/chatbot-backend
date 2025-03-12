@@ -1,0 +1,19 @@
+{
+    "name": "chatbot-backend",
+    "version": "1.0.0",
+    "main": "index.js",
+    "type": "module",
+    "scripts": {
+      "start": "node index.js"
+    },
+    "dependencies": {
+      "express": "^4.18.2",
+      "cors": "^2.8.5",
+      "sqlite": "^4.0.24",
+      "sqlite3": "^5.1.4",
+      "dotenv": "^10.0.0",
+      "json2csv": "^5.0.7",
+      "node-fetch": "^3.2.0"
+    }
+  }
+  
