@@ -4,6 +4,7 @@ import sqlite3 from "sqlite3";
 import { open } from "sqlite";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
+npm install pg
 
 dotenv.config();
 
@@ -14,21 +15,27 @@ app.use(express.json());
 const PORT = process.env.PORT || 3000;
 
 // 📌 Funzione per inizializzare il database SQLite
-async function initDB() {
-    const db = await open({
-        filename: "./chatbot.db",
-        driver: sqlite3.Database
-    });
+import pg from "pg";
 
-await db.exec(`
-    CREATE TABLE IF NOT EXISTS conversations (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_message TEXT,
-        ai_response TEXT,
-        user_email TEXT,
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-`);
+const { Pool } = pg;
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
+});
+
+async function initDB() {
+    const client = await pool.connect();
+    await client.query(`
+        CREATE TABLE IF NOT EXISTS conversations (
+            id SERIAL PRIMARY KEY,
+            user_message TEXT,
+            ai_response TEXT,
+            user_email TEXT,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+    client.release();
+}
 
 
     return db;
@@ -70,7 +77,11 @@ app.post("/chat", async (req, res) => {
         const aiResponse = data.choices[0].message.content;
 
         // 📌 Salviamo la conversazione nel database includendo l'email
-        await db.run(`INSERT INTO conversations (user_message, ai_response, user_email) VALUES (?, ?, ?)`, [message, aiResponse, email]);
+       await pool.query(
+    "INSERT INTO conversations (user_message, ai_response, user_email) VALUES ($1, $2, $3)",
+    [message, aiResponse, email]
+);
+
 
         res.json({ reply: aiResponse });
     } catch (error) {
@@ -82,8 +93,9 @@ app.post("/chat", async (req, res) => {
 // 📌 Endpoint per recuperare le conversazioni salvate
 app.get("/conversations", async (req, res) => {
     try {
-        const conversations = await db.all("SELECT * FROM conversations ORDER BY timestamp DESC");
-        res.json(conversations);
+        const { rows } = await pool.query("SELECT * FROM conversations ORDER BY timestamp DESC");
+res.json(rows);
+
     } catch (error) {
         console.error("Errore nel recupero delle conversazioni:", error);
         res.status(500).json({ error: "Errore nel server" });
@@ -99,7 +111,7 @@ app.delete("/conversations/:id", async (req, res) => {
     const conversationId = req.params.id;
 
     try {
-        await db.run("DELETE FROM conversations WHERE id = ?", conversationId);
+       await pool.query("DELETE FROM conversations WHERE id = $1", [conversationId]);
         res.json({ success: true, message: "Conversazione eliminata" });
     } catch (error) {
         res.status(500).json({ success: false, error: "Errore durante l'eliminazione" });
