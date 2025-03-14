@@ -23,6 +23,8 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
+export default pool;
+
 async function initDB() {
     const client = await pool.connect();
     await client.query(`
