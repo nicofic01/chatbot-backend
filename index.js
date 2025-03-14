@@ -37,7 +37,7 @@ async function initDB() {
     client.release();
 }
 
-}
+
 
 // 📌 Inizializziamo il database
 let db;
