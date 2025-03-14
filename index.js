@@ -1,9 +1,12 @@
 import express from "express";
 import cors from "cors";
-import sqlite3 from "sqlite3";
-import { open } from "sqlite";
+import { Pool } from "pg";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
+import fs from "fs";
+import { Parser } from "json2csv";
+import path from "path";
+import { fileURLToPath } from "url";
 
 
 dotenv.config();
@@ -15,9 +18,9 @@ app.use(express.json());
 const PORT = process.env.PORT || 3000;
 
 // 📌 Funzione per inizializzare il database SQLite
-import pg from "pg";
 
-const { Pool } = pg;
+
+
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false }
@@ -69,7 +72,7 @@ app.post("/chat", async (req, res) => {
                     { role: "system", content: "Sei un assistente esperto nel creare purpose aziendali." },
                     { role: "user", content: message }
                 ],
-                max_tokens: 300
+                max_tokens: 500
             })
         });
 
@@ -102,9 +105,7 @@ res.json(rows);
     }
 });
 
-// Avviamo il server
-app.listen(PORT, () => {
-    console.log(`🚀 Server attivo su http://localhost:${PORT}`);
+
 });
 
 app.delete("/conversations/:id", async (req, res) => {
@@ -118,25 +119,22 @@ app.delete("/conversations/:id", async (req, res) => {
     }
 });
 
-import fs from "fs";
-import { Parser } from "json2csv";
-import path from "path";
-import { fileURLToPath } from "url";
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// 📌 Endpoint per scaricare il CSV delle conversazioni
 app.get("/download-csv", async (req, res) => {
     try {
-        const conversations = await db.all("SELECT * FROM conversations");
+        // Recuperiamo tutte le conversazioni dal database PostgreSQL
+        const { rows } = await pool.query("SELECT * FROM conversations");
 
-        if (conversations.length === 0) {
+        if (rows.length === 0) {
             return res.status(404).json({ success: false, message: "Nessuna conversazione trovata" });
         }
 
         const fields = ["id", "timestamp", "user_message", "ai_response"];
         const json2csvParser = new Parser({ fields });
-        const csv = json2csvParser.parse(conversations);
+        const csv = json2csvParser.parse(rows);
 
         // Percorso del file temporaneo
         const filePath = path.join(__dirname, "conversations.csv");
@@ -159,3 +157,7 @@ app.get("/download-csv", async (req, res) => {
         res.status(500).json({ success: false, error: "Errore nel generare il CSV" });
     }
 });
+
+// Avviamo il server
+app.listen(PORT, () => {
+    console.log(`🚀 Server attivo su http://localhost:${PORT}`);
