@@ -106,7 +106,6 @@ res.json(rows);
 });
 
 
-});
 
 app.delete("/conversations/:id", async (req, res) => {
     const conversationId = req.params.id;
