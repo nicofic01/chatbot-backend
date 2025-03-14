@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
-import { Pool } from "pg";
+import pkg from 'pg';
+const { Pool } = pkg;
 import fetch from "node-fetch";
 import dotenv from "dotenv";
 import fs from "fs";
