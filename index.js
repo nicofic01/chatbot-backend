@@ -4,7 +4,7 @@ import sqlite3 from "sqlite3";
 import { open } from "sqlite";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
-npm install pg
+
 
 dotenv.config();
 
